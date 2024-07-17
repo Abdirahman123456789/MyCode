@@ -1,0 +1,267 @@
+// BLYNK APP CONTROL
+#define BLYNK_TEMPLATE_ID "TMPL2y_pWxfd8"
+#define BLYNK_DEVICE_NAME "IOT BASED SMART PATIENT HEALTH CONTROL SYSTEM"
+#define BLYNK_AUTH_TOKEN "LliPLEY315VoArTeZSby4tUxuhfbQ-AW"
+
+#define BLYNK_PRINT Serial
+#include <WiFi.h>
+#include <WiFiClient.h>
+#include <BlynkSimpleEsp32.h>
+#include <SimpleTimer.h>
+#include <DHT.h>
+
+//------------ body temperature --------
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+#define SENSOR_PIN  17 // ESP32 pin GIOP17 connected to DS18B20 sensor's DATA pin
+
+OneWire oneWire(SENSOR_PIN);
+DallasTemperature DS18B20(&oneWire);
+
+float temp_C; // temperature in Celsius
+float temp_F; // temperature in Fahrenheit
+
+  // LCD DISPLAY LIBRARY
+#include <LiquidCrystal_I2C.h> // library for I2C LCD  
+LiquidCrystal_I2C lcd(0x27, 16, 2); // set the LCD address to 0x27 for a 16 chars and 2 line display
+
+//lCD Diclarations
+//int SDA - Pin G21
+//int SCL - Pin G22
+// VCC - 5V INPUT SIDE
+// GND - GND 
+//-----------------------
+//#define VPIN_BUTTON_1    V5
+//-------------
+
+// Pulse rate sensor declarations
+
+#include <Wire.h>
+#include "MAX30100_PulseOximeter.h"
+
+#define REPORTING_PERIOD_MS     3000
+SimpleTimer timer;
+
+PulseOximeter pox;
+uint32_t tsLastReport = 0;
+
+void onBeatDetected()
+{
+  ;
+}
+
+
+
+//// Flame Sensor declarations
+//int  FlamePin = 2; 
+//bool pinValue = 0;
+//int  FlameValue = 0;
+
+// Light Relay declarations
+//int LightRelay = 19;
+
+bool eventTrigger;
+
+//------------Indicators of the system -------
+int greenled_Pin = 14;
+int redled_Pin = 12;
+int Activebuzzer_Pin = 27;
+//-----------------------------------------
+
+//Temperature sensor declarations
+// GND - GND ESP32
+// VCC + 3.3V ESP32
+int DHTPin = 15;          // What digital pin we're connected to
+#define Type DHT11     // DHT 11
+int FanRelay1 = 5; // is On and Off Switch fan
+int FanRelay2 = 17;  // is temperature operated fan switch control
+DHT dht(DHTPin, Type);
+float humidity;
+float tempC;
+float tempF;
+//BlynkTimer timer;
+
+//BLYNK APP AND INTENET CONNECTIONS
+char auth[] = BLYNK_AUTH_TOKEN;
+char ssid[] = "Setsom-tech";
+char pass[] = "0614444259";
+
+void setup()
+{
+  Serial.begin(9600);
+  // output indicators ------
+//  pinMode(PulsePin, INPUT);
+  pinMode(greenled_Pin, OUTPUT);
+  pinMode(redled_Pin, OUTPUT);
+  pinMode(Activebuzzer_Pin, OUTPUT);
+  // Pulse sensor inputs and outputs
+
+   Serial.print("Initializing pulse oximeter..");
+
+
+  if (!pox.begin()) {
+    Serial.println("FAILED");
+    for (;;);
+  } else {
+    Serial.println("SUCCESS");
+    digitalWrite(1, HIGH);
+  }
+  pox.setIRLedCurrent(MAX30100_LED_CURR_24MA);
+
+  // Register a callback for the beat detection
+  pox.setOnBeatDetectedCallback(onBeatDetected);
+
+//  timer.setInterval(3000L, getSendData);
+
+
+ //------------------
+ 
+  Blynk.begin(auth, ssid, pass);
+  
+  
+//  timer.setInterval(1000L, Body_Sensor);
+//  timer.setInterval(1000L, DHTSensor2);
+//  timer.setInterval(1000L, Heart_Sensor);
+  
+  
+  //other important setups
+  
+  //temperature fan output
+  //--------pinMode(DHTPin, INPUT);-------
+  DS18B20.begin();    // initialize the DS18B20 sensor
+  //pinMode(FanRelay1,OUTPUT);
+  //pinMode(FanRelay2,OUTPUT);
+  //other importants
+  
+  lcd.begin();
+  lcd.backlight();
+  lcd.clear();  
+  dht.begin();
+
+  lcd.setCursor(0,0);
+  lcd.print("IOT PATIENT HEALTH");
+  lcd.setCursor(0,1);
+  lcd.print("CONTROL SYSTEM");
+  delay(5000);
+  lcd.clear();
+  
+  lcd.setCursor(0,0);
+  lcd.print("TEMP=0");
+
+  lcd.setCursor(9,0);
+  lcd.print("BDY=0");
+
+  lcd.setCursor(2,1);
+  lcd.print("HEART=0");
+
+//  lcd.setCursor(9,1);
+//  lcd.print("OXYG=0");
+  
+}
+
+//----------------------------------- First Function -----------------
+//void Body_Sensor() { 
+//  DS18B20.requestTemperatures();       // send the command to get temperatures
+//  temp_C = DS18B20.getTempCByIndex(0);  // read temperature in °C
+//  temp_F = tempC * 9 / 5 + 32; // convert °C to °F
+//
+//  Serial.print("Temperature: ");
+//  Serial.print(temp_C);    // print the temperature in °C
+//  Serial.print("°C");
+//  Serial.print("  ~  ");  // separator between °C and °F
+//  Serial.print(temp_F);    // print the temperature in °F
+//  Serial.println("°F");
+//  if (temp_C>=38){
+//    Blynk.virtualWrite(V5, HIGH);
+//    digitalWrite(redled_Pin,HIGH);
+//    digitalWrite(Activebuzzer_Pin,HIGH);
+//    delay(900);
+//    Blynk.virtualWrite(V5, LOW);
+//    digitalWrite(redled_Pin,LOW);
+//    digitalWrite(Activebuzzer_Pin,LOW);
+//    delay(900);    
+//  }
+//  else{
+//    Blynk.virtualWrite(V5, LOW);
+//    digitalWrite(redled_Pin,LOW);
+//    digitalWrite(Activebuzzer_Pin,LOW);
+//  }
+//  //delay(500);
+//  lcd.setCursor(9,0);
+//  lcd.print("BODY=");
+//  lcd.print(temp_C);
+//  Blynk.virtualWrite(V2, temp_C); //display the moisture percent. 
+//  } 
+//
+////----------------------------------- Second Function -----------------
+//void DHTSensor2()
+//{
+//  //humidity = dht.readHumidity();
+//  tempC = dht.readTemperature(); // or 
+//  tempF = dht.readTemperature(true); //for Fahrenheit
+//  Serial.println(tempC);
+//  Serial.println(tempF);
+//  lcd.setCursor(0,0);
+//  lcd.print("TP=");
+//  lcd.print(tempC);
+//  
+//  if (isnan(tempF) || isnan(tempC)) {
+//    Serial.println("Failed to read from DHT sensor!");
+//    return;
+//  }
+//
+//if((tempC >= 32) && (tempF >= 89.6))
+//  {
+//    
+//  Serial.println(tempC);
+//  }
+//  else
+//  {
+//    
+//  }
+//  Blynk.virtualWrite(V0, tempC);
+//  Blynk.virtualWrite(V1, tempF);
+//}
+
+
+// pulse sensor function
+void Heart_Sensor()
+{
+//   pox.update();
+//    // Grab the updated heart rate and SpO2 levels
+//    if (millis() - tsLastReport > REPORTING_PERIOD_MS) {
+//        Serial.print("Heart rate:");
+//        Serial.print(pox.getHeartRate());
+//        Serial.print("bpm / SpO2:");
+//        Serial.print(pox.getSpO2());
+//        Serial.println("%");
+//
+//        tsLastReport = millis();
+//    }
+// //Blynk.virtualWrite(V3,pox.getHeartRate());
+//// Blynk.virtualWrite(V4,pox.getSpO2());
+// 
+}
+
+// -------------- Loop Operations --------------
+void loop()
+{
+//  Heart_Sensor();
+//  digitalWrite(greenled_Pin,HIGH);
+//
+//  timer.run();
+//  Blynk.run();
+   pox.update();
+
+    // Grab the updated heart rate and SpO2 levels
+    if (millis() - tsLastReport > REPORTING_PERIOD_MS) {
+        Serial.print("Heart rate:");
+        Serial.print(pox.getHeartRate());
+        Serial.print("bpm / SpO2:");
+        Serial.print(pox.getSpO2());
+        Serial.println("%");
+
+        tsLastReport = millis();
+    }
+}
